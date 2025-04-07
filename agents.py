@@ -505,4 +505,120 @@ class ResumeAnalysisAgent:
         except Exception as e:
             print(f"Error generating resume improvements: {e}")
             return {area: {"description": "Error generating suggestions", "specific": []} for area in improvement_areas}
+        
+    
+    def get_imrpoved_resume(self, target_role="", highlight_skills=""):
+        if not self.resume_text:
+            return "Please upload and analyze a resume first."
+        
+        try:
+            skills_to_highlight = []
+            if highlight_skills:
+                if len(highlight_skills) > 100:
+                    self.jd_text = highlight_skills
+                    try:
+                        parsed_skills = self.extract_skills_from_jd(highlight_skills)
 
+                        if parsed_skills:
+                            skills_to_highlight = parsed_skills
+                        else:
+                            skills_to_highlight = [s.strip() for s in highlight_skills.split(",") if s.strip()]
+                    
+                    except:
+
+                        skills_to_highlight = [s.strip() for s in highlight_skills.split(",") if s.strip()]
+                
+                else:
+                    skills_to_highlight = [s.strip() for s in highlight_skills.split(",") if s.strip()]
+            
+            if not skills_to_highlight and self.analysis_result:
+                skills_to_highlight = self.analysis_result.get('missing_skills', [])
+
+                skills_to_highlight.extend([
+                    skill for skill in self.analysis_result.get('strengths', []) 
+                    if skill not in skills_to_highlight
+                ])
+
+                if self.extracted_skills:
+                    skills_to_highlight.extend([
+                        skill for skill in self.extracted_skills
+                        if skill not in skills_to_highlight
+                    ])
+            
+            weakness_context = ""
+            improvement_examples = ""
+
+            if self.resume_weaknesses:
+                weakness_context = "Address these specific weaknesses:\n"
+
+                for weakness in self.resume_weaknesses:
+                    skill_name = weakness.get('skill', '')
+                    weakness_context += f"- {skill_name}: {weakness.get('detail', '')}\n"
+
+                    if 'suggestions' in weakness and weakness['suggestions']:
+                        weakness_context += " Suggested Improvements:\n"
+                        for suggestion in weakness['suggestions']:
+                            weakness_context += f" * {suggestion}\n"
+
+                    if 'example' in weakness and weakness['example']:
+                        improvement_examples += f"For {skill_name}: {weakness['example']}\n\n"
+        
+            llm = ChatOpenAI(model="gpt-4o", temperature=0.7, api_key=self.api_key)
+
+            jd_context = ""
+            if self.jd_text:
+                jd_context = f"Job Description:\n{self.jd_text}\n\n"
+            elif target_role:
+                jd_context = f"Target Role: {target_role}\n\n"
+            
+            prompt = f"""
+            Rewrite and improve this resume to make it highly optimized for the target job.
+
+            {jd_context}
+            Original Resume:
+            {self.resume_text}
+
+            Skills to highlight (in order of priority): {', '.join(skills_to_highlight)}
+
+            {weakness_context}
+
+            Here are specific examples of content to add:
+            {improvement_examples}
+
+            Please improve the resume by:
+            1. Adding strong, quantifiable achievements
+            2. Highlighting the specified skills strategically for ATS scanning
+            3. Addressing all the weakness areas identified with the specific suggestions provided
+            4. Incorporating the example improvements provided above
+            5. Structuring information in a clear, professional format
+            6. Using industry-standard terminology
+            7. Ensuring all relevant experience is properly emphasized 
+            8. Adding measurable outcomes and achievements
+
+            Return only the imrpoved resume text without any additional explanations.
+            Format the resume in modern, clean style with clear section headings.
+            """
+
+            response = llm.invoke(prompt)
+            improved_resume = response.content.strip()
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.txt', mode='w', encoding='utf-8') as tmp:
+                tmp.write(improved_resume)
+                self.improved_resume_path = tmp.name
+            return improved_resume
+        
+        except Exception as e:
+            print(f"Error generating improved resume: {e}")
+            return "Error generating improved resume. Please try again."
+    
+    def cleanup(self):
+        try:
+            if hasattr(self, 'resume_file_path') and os.path.exists(self.resume_file_path):
+                os.unlink(self.resume_file_path)
+            
+            if hasattr(self, 'improved_resume_path') and os.path.exists(self.improved_resume_path):
+                os.unlink(self.improved_resume_path)
+        
+        except Exception as e:
+            print(f"Error cleaning up temporary files: {e}")
+            
