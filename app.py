@@ -17,6 +17,187 @@ ROLE_REQUIREMENTS = {
         "Artificial Intelligence"
     ],
     "Frontend Engineer": [
-        "React", "Vue", "Angular", "HTML5", "CSS3", "JavaScript", "TypeScript", "Next.js", "Svelte", "Bootstrap", "TailWindCSS"
-    ] 
+        "React", "Vue", "Angular", "HTML5", "CSS3", "JavaScript", "TypeScript", "Next.js", "Svelte", "Bootstrap", "TailWind CSS", "GraphQL",
+        "Redux", "WebAssembly", "Three.js", "Performance Optimization"
+    ],
+    "Backend Engineer": [
+        "Python", "Java", "Node.js", "REST APIs", "Cloud services", "Kuvernetes", "Docker", "GrpahQL", "Microservices", "gRPC", "Spring Boot",
+        "Flask", "FastAPI", "SQL and NoSQL Databases", "Redis", "RabbitMQ", "CI/CD"
+    ],
+    "Data Engineer": [
+        "Python", "SQL", "Apache Spark", "Hadoop", "Kafka", "ETL Pipelines", "Airflow", "BigQuery", "Redshift", "Data Warehousing",
+        "Snowflake", "Azure Data Factory", "GCP", "AWS Glue", "DBT"
+    ],
+    "DevOps Engineer": [
+        "Kubernetes", "Docker", "Terraform", "CI/CD", "AWS", "Azure", "GCP", "Jenkins", "Ansible", "Prometheus", "Grafana", "Helm",
+        "Linux Administration", "Networking", "Site Reliability Engineering (SRE)"
+    ],
+    "Full Stack Developer": [
+        "JavaScript", "TypeScript", "React", "Node.js", "Express", "MongoDB", "SQL", "HTML5", "CSS3", "RESTful APIs", "Git", "CI/CD",
+        "Cloud Services", "Responsive Design", "Authentication and Authorization"
+    ],
+    "Product Manager": [
+        "Product Strategy", "User Research", "Agile Methodologies", "Roadmapping", "Market Analysis", "Stakeholder Management", "Data Analysis",
+        "User Stories", "Product Lifecycle", "A/B Testing", "KPI Definition", "Prioritization", "Competitive Analysis", "Customer Journey Mapping"
+    ],
+    "Data Scientist": [
+        "Python", "R", "SQL", "Machine Learning", "Statistics", "Data Visualization", "Pandas", "NumPy", "Scikit-learn", "Jupyter", "Hypothesis Testing",
+        "Experimental Design", "Feature Engineering", "Model Evaluation"
+    ]
 }
+
+if 'resume_agent' not in st.session_state:
+    st.session_state.resume_agent = None
+
+if 'resume_analyzed' not in st.session_state:
+    st.session_state.resume_analyzed = False
+
+if 'analysis_result' not in st.session_state:
+    st.session_state.analysis_result = None
+
+def setup_agent(config):
+    if not config["openai_api_key"]:
+        st.error("⚠️ Please enter your OpenAI API Key in the sidebar.")
+        return None
+    
+    if st.session_state.resume_agent is None:
+        st.session_state.resume_agent = ResumeAnalysisAgent(api_key=config["openai_api_key"])
+    
+    else:
+        st.session_state.resume_agent.api_key = config["openai_api_key"]
+    
+    return st.session_state.resume_agent
+
+def analyze_resume(agent, resume_file, role, custom_jd):
+    if not resume_file:
+        st.error("⚠️ Please upload resume")
+        return None
+    
+    try:
+        with st.spinner("🔍 Analyzing resume... This may take a minute."):
+            if custom_jd:
+                result = agent.analyze_resume(resume_file, custom_jd=custom_jd)
+            else:
+                result = agent.analyze_resume(resume_file, role_requirements = ROLE_REQUIREMENTS[role])
+            
+
+            st.session_state.resume_analyzed = True
+            st.session_state.analysis_result = result
+            return result
+    
+    except Exception as e:
+        st.error(f"⚠️ Error analyzing resume: {e}")
+        return None
+    
+
+def ask_question(agent, question):
+    try:
+        with st.spinner("Generating response..."):
+            response = agent.ask_question(question)
+            return response
+    
+    except Exception as e:
+        return f"Error: {e}"
+
+def generate_interview_questions(agent, question_types, difficulty, num_questions):
+
+    try:
+        with st.spinner("Generating personalized interview questions..."):
+            questions = agent.generate_inerview_questions(question_types, difficulty, num_questions)
+            return questions
+    
+    except Exception as e:
+        st.error(f"⚠️ Error generating questions: {e}")
+        return []
+
+def improve_resume(agent, improvement_areas, target_role):
+    try:
+        with st.spinner("Analyzing and generating improvements..."):
+            return agent.improve_resume(improvement_areas, target_role)
+    
+    except Exception as e:
+        st.error(f"⚠️ Error generating improvements: {e}")
+        return {}
+
+def get_improved_resume(agent, target_role, highlight_skills):
+    try:
+        with st.spinner("Creating improved resume..."):
+            return agent.get_improved_resume(target_role, highlight_skills)
+    
+    except Exception as e:
+        st.error(f"⚠️ Error creating improved resume: {e}")
+        return "Error generating improved resume."
+
+def cleanup():
+    if st.session_state.resume_agent:
+        st.session_state.resume_agent.cleanup()
+    
+atexit.register(cleanup)
+
+def main():
+    ui.setup_page()
+    ui.display_header()
+
+    config = ui.setup_sidebar()
+
+    agent = setup_agent(config)
+
+    tabs = ui.create_tabs()
+
+    with tabs[0]:
+        role, custom_jd = ui.role_selection_section(ROLE_REQUIREMENTS)
+        uploaded_resume = ui.resume_upload_section()
+
+        col1, col2, col3 = st.columns([1,1,1])
+        with col2:
+            if st.button("🔍 Analyze Resume", type="primary"):
+                if agent and uploaded_resume:
+                    analyze_resume(agent, uploaded_resume, role, custom_jd)
+        
+        if st.session_state.analysis_result:
+            ui.display_analysis_results(st.session_state.analysis_result)
+    
+    with tabs[1]:
+        if st.session_state.resume_analyzed and st.session_state.resume_agent:
+            ui.resume_qa_section(
+                has_resume=True,
+                ask_question_func=lambda q: ask_question(st.session_state.resume_agent, q)
+            )
+        
+        else: 
+            st.warning("Please upload and analyze a resume first in the 'Resume Analysis' tab.")
+    
+    with tabs[2]:
+        if st.session_state.resume_analyzed and st.session_state.resume_agent:
+            ui.interview_questions_section(
+                has_resume=True,
+                generate_questions_func=lambda types, diff, num:
+                generate_interview_questions(st.session_state.resume_agent, types, diff, num)
+            )
+        
+        else:
+            st.warning("Please upload and analyze a resume first in the 'Resume Analysis' tab.")
+    
+    with tabs[3]:
+        if st.session_state.resume_analyzed and st.session_state.resume_agent:
+            ui.resume_improvement_section(
+                has_resume=True,
+                improve_resume_func=lambda areas, role: improve_resume(st.session_state.resume_agent, areas, role)
+            )
+        
+        else:
+            st.warning("Please upload and analyze a resume first in the 'Resume Analysis' tab.")
+    
+    with tabs[4]:
+        if st.session_state.resume_analyzed and st.session_state.resume_agent:
+            ui.improved_resume_section(
+                has_resume=True,
+                get_improved_resume_func=lambda role, skills: get_improved_resume(st.session_state.resume_agent, role, skills)
+            )
+        
+        else:
+            st.warning("Please upload and analyze a resume first in the 'Resume Analysis' tab.")
+    
+
+if __name__ == "__main__":
+    main()
