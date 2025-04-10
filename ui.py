@@ -15,7 +15,7 @@ def setup_page():
                 logoImg.onerror=function(){
                     var logoContainer=document.querySelector('.logo-container');
                     if(logoContainer){
-                        logoContainer.innerHTML='<div style="font-size: 40px;"></div>';
+                        logoContainer.innerHTML='<div style="font-size: 40px;">🚀</div>';
                     }
                 };
             }
@@ -29,7 +29,7 @@ def display_header():
             logo_base64 = base64.b64encode(img_file.read()).decode()
             logo_html = f'<img src="data:image/jpeg;base64,{logo_base64}" alt="Logo" class="logo-image" style="max-height: 100px;">'
     except:
-        logo_html='<div style="font-size: 50px; text-align: center;"></div>'
+        logo_html='<div style="font-size: 50px; text-align: center;">🚀</div>'
     
     st.markdown(f"""
     <div class="main-header">
@@ -39,7 +39,7 @@ def display_header():
                 {logo_html}
             </div>
             <div class="title-container" style="text-align: center;">
-                <h1>Recruitment Agent</h1>
+                <h1>AI Recruitment Agent</h1>
                 <p>Smart Resume Analysis & Interview Preperation System</p>
             </div>
         </div>
@@ -240,7 +240,7 @@ def setup_sidebar():
         }
 
 def role_selection_section(role_requirements):
-    st.markdown('<div class="card>', unsafe_allow_html=True)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
 
     col1, col2 = st.columns([2,1])
 
@@ -324,10 +324,10 @@ def display_analysis_results(analysis_result):
     skill_scores = analysis_result.get("skill_scores", {})
     detailed_weaknesses = analysis_result.get("detailed_weaknesses", [])
 
-    st.markdown('<div class="card>', unsafe_allow_html=True)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     
     st.markdown(
-        '<div style="text-align: right; font-size: 0.8rem; color: #888; margin-bottom: 10px;">Powered by Recruitment Agent</div>',
+        '<div style="text-align: right; font-size: 0.8rem; color: #888; margin-bottom: 10px;">Powered by AI Recruitment Agent</div>',
         unsafe_allow_html=True
     )
 
@@ -386,7 +386,7 @@ def display_analysis_results(analysis_result):
                 if detail.startswith('```json') or '{' in detail:
                     detail = "The resume lacks examples of this skill."
                 
-                st.markdown(f'div class="weakness-detail"><strong>Issue:</strong> {detail}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="weakness-detail"><strong>Issue:</strong> {detail}</div>', unsafe_allow_html=True)
 
                 if 'suggestions' in weakness and weakness['suggestions']:
                     st.markdown("<strong> How to improve:</strong>", unsafe_allow_html=True)
@@ -441,7 +441,7 @@ def display_analysis_results(analysis_result):
         report_content += "\n---\nAnalysis provided by Recruitment Agent"
 
         report_b64 = base64.b64encode(report_content.encode()).decode()
-        href = f'<a class="download-btn" href="data:text/plain;base64, {report_b64}" download="resume_analysis.txt:>📊 Download Analysis Report</a>'
+        href = f'<a class="download-btn" href="data:text/plain;base64, {report_b64}" download="resume_analysis.txt">📊 Download Analysis Report</a>'
         st.markdown(href, unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
@@ -454,7 +454,11 @@ def resume_qa_section(has_resume, ask_question_func=None):
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
     st.subheader("Ask questions about the Resume")
-    user_question = st.text_input("Enter your question about the analysis of your resume", placeholder="What is the candidate's most recent experience")
+    # user_question = st.text_input("Enter your question about the analysis of your resume", placeholder="What is the candidate's most recent experience")
+    user_question = st.text_input("Enter your question about the analysis of your resume", 
+                                  value=getattr(st.session_state, 'current_question', ''),
+                                  placeholder="What is the candidate's most recent experience")
+
 
     if user_question and ask_question_func:
         with st.spinner("Analyzing resume and generating response..."):
@@ -478,7 +482,10 @@ def resume_qa_section(has_resume, ask_question_func=None):
         for question in example_questions:
             if st.button(question, key=f"q_{question}"):
                 st.session_state.current_question = question
-                st.experimental_rerun()
+                st.session_state.question_clicked = True
+    
+    if 'question_clicked' in st.session_state and st.session_state.question_clicked:
+        st.session_state.question_clicked = False
     
     st.markdown('</div>', unsafe_allow_html=True)
 

@@ -103,7 +103,7 @@ def generate_interview_questions(agent, question_types, difficulty, num_question
 
     try:
         with st.spinner("Generating personalized interview questions..."):
-            questions = agent.generate_inerview_questions(question_types, difficulty, num_questions)
+            questions = agent.generate_interview_questions(question_types, difficulty, num_questions)
             return questions
     
     except Exception as e:

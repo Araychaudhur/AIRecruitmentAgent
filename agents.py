@@ -145,7 +145,7 @@ class ResumeAnalysisAgent:
                     "suggestions": weakness_data.get("imrpovement_suggestions", []),
                     "example": weakness_data.get("example_addition", "")
                 }
-            except json.JSONDecoder:
+            except json.JSONDecodeError:
 
                 weaknesses.append({
                     "skill": skill,
@@ -206,7 +206,7 @@ class ResumeAnalysisAgent:
         qa_chain = RetrievalQA.from_chain_type(
             llm = ChatOpenAI(model="gpt-4o", api_key = self.api_key),
             retriever = retriever,
-            return_source_document = False
+            return_source_documents = False
         )
 
         skill_scores = {}
