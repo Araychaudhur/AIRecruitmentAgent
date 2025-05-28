@@ -507,7 +507,7 @@ class ResumeAnalysisAgent:
             return {area: {"description": "Error generating suggestions", "specific": []} for area in improvement_areas}
         
     
-    def get_imrpoved_resume(self, target_role="", highlight_skills=""):
+    def get_improved_resume(self, target_role="", highlight_skills=""):
         if not self.resume_text:
             return "Please upload and analyze a resume first."
         
